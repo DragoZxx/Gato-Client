@@ -25,7 +25,7 @@ import kotlin.math.sqrt
  * auth input's HORIZONTAL_COLLISION / AUTO_JUMPING_IN_WATER flags are used
  * as the per-tick "touching terrain/water" signal that caps speed to 2.0.
  */
-class BypassFlyModule : Module("bypassfly", ModuleCategory.Motion) {
+class BypassFlyModule : Module("BypassFly", ModuleCategory.Motion) {
 
     // --- Settings: same names, defaults and ranges as the PC module ---
     private var initialH by floatValue("Initial Horizontal", 2.42f, 0.1f..3.0f)

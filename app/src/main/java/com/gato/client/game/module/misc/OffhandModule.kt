@@ -1,6 +1,7 @@
 package com.gato.client.game.module.misc
 
 import com.gato.client.game.InterceptablePacket
+import com.gato.client.game.ListItem
 import com.gato.client.game.Module
 import com.gato.client.game.ModuleCategory
 import com.gato.client.game.inventory.PlayerInventory
@@ -9,12 +10,6 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.ItemData
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket
 import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket
 import org.cloudburstmc.protocol.bedrock.packet.UpdateAttributesPacket
-
-/** PC EnumSetting "Item": { "Totem", "Shield" } */
-enum class OffhandItem {
-    Totem,
-    Shield
-}
 
 /**
  * Port of the GatoClient (PC) Offhand module (the AutoTotem) — exact behavior
@@ -36,16 +31,24 @@ enum class OffhandItem {
  * - SurroundOnly approximates the PC's 4-side air check with the auth input's
  *   HORIZONTAL_COLLISION flag — the relay has no voxel access.
  */
-class OffhandModule : Module("offhand", ModuleCategory.Misc) {
+class OffhandModule : Module("Offhand", ModuleCategory.Misc) {
+
+    // --- named selector (horizontal chip list in the UI) ---
+    private class Mode(override val name: String, val idx: Int) : ListItem
+
+    private val itemModes = listOf(Mode("Totem", 0), Mode("Shield", 1))
 
     // --- Settings: same names and defaults as the PC module ---
-    private var itemMode by enumValue("Item", OffhandItem.Totem, OffhandItem::class.java)
+    private var itemItem by listValue("Item", itemModes[0], itemModes.toSet())
     private var delay by intValue("Delay", 0, 0..20)
     private var smart by boolValue("Smart", false)
     private var swapToHealth by floatValue("Swap Totem", 0f, 0f..20f)
     private var swapBack by floatValue("Swap Shield", 0f, 0f..20f)
     private var surroundOnly by boolValue("SurroundOnly", false)
     private var debug by boolValue("Debug", false)
+
+    // int accessor over the named selector
+    private val itemMode get() = (itemItem as Mode).idx
 
     init {
         // Visibility rules copied from the PC registerSetting lambdas
@@ -99,7 +102,7 @@ class OffhandModule : Module("offhand", ModuleCategory.Misc) {
 
         var itemNameTarget: String? = null
         if (!smart) {
-            itemNameTarget = if (itemMode == OffhandItem.Totem) TOTEM else SHIELD
+            itemNameTarget = if (itemMode == 0) TOTEM else SHIELD
             if (itemName(offhand) == itemNameTarget) return
         } else {
             // Update shouldweswap flag FIRST (health hysteresis, same as PC)

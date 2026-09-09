@@ -90,6 +90,9 @@ open class Entity(open val runtimeEntityId: Long, open val uniqueEntityId: Long)
 
     var rideEntity: Long? = null
 
+    /** Last on-ground state seen in the entity's movement packets. */
+    var onGround: Boolean = false
+
     open val attributes = mutableMapOf<String, AttributeData>()
 
     open val metadata = EntityDataMap()
@@ -172,6 +175,7 @@ open class Entity(open val runtimeEntityId: Long, open val uniqueEntityId: Long)
         if (packet is MoveEntityAbsolutePacket && packet.runtimeEntityId == runtimeEntityId) {
             move(packet.position)
             rotate(packet.rotation)
+            onGround = packet.isOnGround
             tickExists++
         } else if (packet is MoveEntityDeltaPacket && packet.runtimeEntityId == runtimeEntityId) {
             move(

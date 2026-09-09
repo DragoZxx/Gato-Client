@@ -30,7 +30,7 @@ import kotlin.math.sqrt
  * - The PC resets its own counter when !isAlive each tick; the relay equivalent
  *   is resetting it on the respawn packet.
  */
-class PopCounterModule : Module("popcounter", ModuleCategory.Misc) {
+class PopCounterModule : Module("PopCounter", ModuleCategory.Misc) {
 
     // --- Settings: same names and defaults as the PC module ---
     private var sendPops by boolValue("Send Pop Message", false)

@@ -23,7 +23,7 @@ import kotlin.math.sin
  * (one per client tick): the real client integrates that motion, its next auth
  * input carries the moved position, and the server sees the same trajectory.
  */
-class FlyModule : Module("fly", ModuleCategory.Motion) {
+class FlyModule : Module("Fly", ModuleCategory.Motion) {
 
     // --- Settings: same names, defaults and ranges as the PC module ---
     private var hSpeed by floatValue("HSpeed", 1.0f, 0.2f..3.0f)

@@ -25,6 +25,7 @@ open class Player(
         if (packet is MovePlayerPacket && packet.runtimeEntityId == runtimeEntityId) {
             move(packet.position.x, packet.position.y, packet.position.z)
             rotate(packet.rotation)
+            onGround = packet.isOnGround
             tickExists++
         }
     }

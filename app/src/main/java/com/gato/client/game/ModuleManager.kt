@@ -5,6 +5,9 @@ import android.content.Context
 import android.net.Uri
 import com.gato.client.application.AppContext
 import com.gato.client.game.module.combat.AntiCrystalModule
+import com.gato.client.game.module.combat.GatoAuraModule
+import com.gato.client.game.module.combat.GatoAuraXModule
+import com.gato.client.game.module.combat.Plus999AuraModule
 import com.gato.client.game.module.combat.AntiKnockbackModule
 import com.gato.client.game.module.combat.CrystalSmashModule
 import com.gato.client.game.module.combat.HitAndRunModule
@@ -45,6 +48,7 @@ import com.gato.client.game.module.misc.CommandHandlerModule
 import com.gato.client.game.module.misc.OffhandModule
 import com.gato.client.game.module.misc.PopCounterModule
 import com.gato.client.game.module.misc.DesyncModule
+import com.gato.client.game.module.misc.TimerModule
 import com.gato.client.game.module.misc.FakeDeathModule
 import com.gato.client.game.module.misc.FakeXPModule
 import com.gato.client.game.module.misc.NoChatModule
@@ -123,9 +127,13 @@ object ModuleManager {
             add(PositionLoggerModule())
             add(PopCounterModule())
             add(OffhandModule())
+            add(TimerModule())
             add(MotionFlyModule())
             add(FreeCameraModule())
             add(KillauraModule())
+            add(GatoAuraModule())
+            add(Plus999AuraModule())
+            add(GatoAuraXModule())
             add(NauseaModule())
             add(HealthBoostModule())
             add(JumpBoostModule())
