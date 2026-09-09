@@ -42,6 +42,8 @@ import com.gato.client.game.module.effect.WeaknessModule
 import com.gato.client.game.module.effect.WitherModule
 import com.gato.client.game.module.misc.BaritoneModule
 import com.gato.client.game.module.misc.CommandHandlerModule
+import com.gato.client.game.module.misc.OffhandModule
+import com.gato.client.game.module.misc.PopCounterModule
 import com.gato.client.game.module.misc.DesyncModule
 import com.gato.client.game.module.misc.FakeDeathModule
 import com.gato.client.game.module.misc.FakeXPModule
@@ -119,6 +121,8 @@ object ModuleManager {
             add(AntiAFKModule())
             add(DesyncModule())
             add(PositionLoggerModule())
+            add(PopCounterModule())
+            add(OffhandModule())
             add(MotionFlyModule())
             add(FreeCameraModule())
             add(KillauraModule())

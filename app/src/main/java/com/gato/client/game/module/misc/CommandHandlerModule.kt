@@ -2,6 +2,7 @@ package com.gato.client.game.module.misc
 
 import com.gato.client.game.InterceptablePacket
 import com.gato.client.game.Module
+import com.gato.client.game.FriendManager
 import com.gato.client.game.ModuleCategory
 import com.gato.client.game.ModuleManager
 import org.cloudburstmc.protocol.bedrock.packet.TextPacket
@@ -72,6 +73,49 @@ class CommandHandlerModule : Module("command_handler", ModuleCategory.Misc, true
                                 §f.replay stop §7- Stop recording/playback
                                 §f.replay save <name> §7- Save recording
                                 §f.replay load <name> §7- Load recording
+                            """.trimIndent())
+                        }
+                    }
+                }
+                "friend" -> {
+                    when (args.getOrNull(1)?.lowercase()) {
+                        "add" -> {
+                            val name = args.getOrNull(2)
+                            if (name == null) {
+                                session.displayClientMessage("§cUsage: .friend add <name>")
+                                return
+                            }
+                            if (FriendManager.add(name)) {
+                                session.displayClientMessage("§l§b[Gato Client Mobile] §r§aAdded friend: §f$name")
+                            } else {
+                                session.displayClientMessage("§l§b[Gato Client Mobile] §r§c$name is already a friend")
+                            }
+                        }
+                        "remove" -> {
+                            val name = args.getOrNull(2)
+                            if (name == null) {
+                                session.displayClientMessage("§cUsage: .friend remove <name>")
+                                return
+                            }
+                            if (FriendManager.remove(name)) {
+                                session.displayClientMessage("§l§b[Gato Client Mobile] §r§aRemoved friend: §f$name")
+                            } else {
+                                session.displayClientMessage("§l§b[Gato Client Mobile] §r§c$name is not a friend")
+                            }
+                        }
+                        "list" -> {
+                            if (FriendManager.friends.isEmpty()) {
+                                session.displayClientMessage("§l§b[Gato Client Mobile] §r§7No friends added")
+                            } else {
+                                session.displayClientMessage("§l§b[Gato Client Mobile] §r§7Friends: §f${FriendManager.friends.joinToString("§7, §f")}")
+                            }
+                        }
+                        else -> {
+                            session.displayClientMessage("""
+                                §l§b[Friends] §r§7Commands:
+                                §f.friend add <name> §7- Add a friend
+                                §f.friend remove <name> §7- Remove a friend
+                                §f.friend list §7- List friends
                             """.trimIndent())
                         }
                     }
