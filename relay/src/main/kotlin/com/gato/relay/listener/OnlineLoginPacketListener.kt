@@ -2,10 +2,11 @@ package com.gato.relay.listener
 
 import com.gato.relay.GatoRelaySession
 import com.gato.relay.util.AuthUtils
-import net.raphimc.minecraftauth.step.bedrock.session.StepFullBedrockSession
+import com.gato.relay.util.isExpired
+import net.raphimc.minecraftauth.bedrock.BedrockAuthManager
 import org.cloudburstmc.protocol.bedrock.data.PacketCompressionAlgorithm
 import org.cloudburstmc.protocol.bedrock.data.auth.AuthType
-import org.cloudburstmc.protocol.bedrock.data.auth.CertificateChainPayload
+import org.cloudburstmc.protocol.bedrock.data.auth.TokenPayload
 import org.cloudburstmc.protocol.bedrock.packet.*
 import org.cloudburstmc.protocol.bedrock.util.EncryptionUtils
 import org.cloudburstmc.protocol.bedrock.util.JsonUtils
@@ -20,14 +21,14 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 @Suppress("MemberVisibilityCanBePrivate")
 class OnlineLoginPacketListener(
     val gatoRelaySession: GatoRelaySession,
-    val fullBedrockSession: StepFullBedrockSession.FullBedrockSession
+    val authManager: BedrockAuthManager
 ) : GatoRelayPacketListener {
 
     private var skinData: JSONObject? = null
 
     override fun beforeClientBound(packet: BedrockPacket): Boolean {
         if (packet is LoginPacket) {
-            if (fullBedrockSession.isExpired) {
+            if (authManager.isExpired) {
                 gatoRelaySession.server.disconnect("Your session was expired, you need to delete account then login again in the Gato Client Mobile")
                 return true
             }
@@ -57,17 +58,17 @@ class OnlineLoginPacketListener(
             }
 
             try {
-                val chain = AuthUtils.fetchOnlineChain(fullBedrockSession)
+                val token = AuthUtils.fetchOnlineToken(authManager)
                 val skinData =
                     AuthUtils.fetchOnlineSkinData(
-                        fullBedrockSession,
+                        authManager,
                         skinData!!,
                         gatoRelaySession.gatoRelay.remoteAddress!!
                     )
 
                 val loginPacket = LoginPacket()
                 loginPacket.protocolVersion = gatoRelaySession.server.codec.protocolVersion
-                loginPacket.authPayload = CertificateChainPayload(chain, AuthType.FULL)
+                loginPacket.authPayload = TokenPayload(token, AuthType.FULL)
                 loginPacket.clientJwt = skinData
                 gatoRelaySession.serverBoundImmediately(loginPacket)
 
@@ -90,7 +91,7 @@ class OnlineLoginPacketListener(
             val x5u = jws.getHeader(HeaderParameterNames.X509_URL)
             val serverKey = EncryptionUtils.parseKey(x5u)
             val key = EncryptionUtils.getSecretKey(
-                fullBedrockSession.mcChain.privateKey, serverKey,
+                authManager.sessionKeyPair.private, serverKey,
                 Base64.decode(JsonUtils.childAsType(saltJwt, "salt", String::class.java))
             )
             gatoRelaySession.client!!.enableEncryption(key)

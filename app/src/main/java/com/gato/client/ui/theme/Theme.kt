@@ -9,20 +9,24 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 
 /**
- * Material3 mapping of the GatoClient (PC) Colors module palette
- * (see [GatoColors] for the verbatim RGBA values).
+ * Material3 schemes built around the configurable [ColorTheme] accent
+ * (pastel pink by default — the GatoClient PC identity). The dark scheme
+ * keeps the PC GUI surfaces (Fondo #140C20, Panel #24163A, Borde #582D96,
+ * Texto #F5EBFF); the light scheme derives from the same hues. The accent
+ * pair (accent + softened secondary) is user-selectable in Settings.
  */
-private val DarkColorScheme = darkColorScheme(
-    // Accents — mainColor / secondColor / Borde
-    primary = GatoColors.mainColor,
-    onPrimary = Color(20, 12, 32, 255),
-    primaryContainer = Color(60, 40, 90, 255),
+private fun darkScheme(accent: Color, accentSoft: Color) = darkColorScheme(
+    // Accents
+    primary = accent,
+    onPrimary = if (accent.luminance() > 0.5f) Color(20, 12, 32, 255) else Color(245, 235, 255, 255),
+    primaryContainer = ColorTheme.lighten(accent, 0.25f).copy(alpha = 0.35f),
     onPrimaryContainer = Color(245, 235, 255, 255),
-    secondary = GatoColors.secondColor,
-    onSecondary = Color(20, 12, 32, 255),
+    secondary = accentSoft,
+    onSecondary = if (accentSoft.luminance() > 0.5f) Color(20, 12, 32, 255) else Color(245, 235, 255, 255),
     secondaryContainer = Color(60, 40, 90, 255),
     onSecondaryContainer = Color(245, 235, 255, 255),
     tertiary = Color(88, 45, 150, 255),
@@ -46,22 +50,21 @@ private val DarkColorScheme = darkColorScheme(
     surfaceDim = Color(16, 10, 26, 255),
     inverseSurface = Color(245, 235, 255, 255),
     inverseOnSurface = Color(36, 22, 58, 255),
-    inversePrimary = Color(120, 55, 200, 255),
+    inversePrimary = accent.copy(alpha = 0.85f),
 
     // Structure — Borde / Resaltado
     outline = Color(88, 45, 150, 255),
-    outlineVariant = Color(70, 38, 118, 255),
+    outlineVariant = Color(70, 38, 118, 255)
 )
 
-private val LightColorScheme = lightColorScheme(
-    // Same hues as the PC palette, adapted to a light surface
-    primary = Color(130, 60, 200, 255),
-    onPrimary = Color(255, 255, 255, 255),
-    primaryContainer = Color(235, 215, 255, 255),
+private fun lightScheme(accent: Color, accentSoft: Color) = lightColorScheme(
+    primary = accent,
+    onPrimary = if (accent.luminance() > 0.5f) Color(30, 20, 48, 255) else Color(255, 255, 255, 255),
+    primaryContainer = ColorTheme.lighten(accent, 0.55f),
     onPrimaryContainer = Color(40, 20, 70, 255),
-    secondary = Color(200, 100, 160, 255),
-    onSecondary = Color(255, 255, 255, 255),
-    secondaryContainer = Color(255, 225, 240, 255),
+    secondary = accentSoft,
+    onSecondary = if (accentSoft.luminance() > 0.5f) Color(70, 20, 55, 255) else Color(255, 255, 255, 255),
+    secondaryContainer = ColorTheme.lighten(accentSoft, 0.5f),
     onSecondaryContainer = Color(70, 20, 55, 255),
     tertiary = Color(88, 45, 150, 255),
     onTertiary = Color(255, 255, 255, 255),
@@ -82,10 +85,10 @@ private val LightColorScheme = lightColorScheme(
     surfaceDim = Color(220, 212, 234, 255),
     inverseSurface = Color(30, 20, 48, 255),
     inverseOnSurface = Color(247, 243, 252, 255),
-    inversePrimary = Color(220, 180, 255, 255),
+    inversePrimary = ColorTheme.lighten(accent, 0.35f),
 
     outline = Color(88, 45, 150, 255),
-    outlineVariant = Color(205, 190, 225, 255),
+    outlineVariant = Color(205, 190, 225, 255)
 )
 
 @Composable
@@ -94,14 +97,16 @@ fun GatoClientTheme(
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    val context = LocalContext.current
+    ColorTheme.load(context)
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
 
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> darkScheme(ColorTheme.accent, ColorTheme.accentSoft)
+        else -> lightScheme(ColorTheme.accent, ColorTheme.accentSoft)
     }
 
     MaterialTheme(

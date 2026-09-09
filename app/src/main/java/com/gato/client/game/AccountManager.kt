@@ -8,13 +8,14 @@ import androidx.compose.runtime.setValue
 import com.google.gson.JsonParser
 import com.gato.client.application.AppContext
 import com.gato.relay.util.AuthUtils
-import com.gato.relay.util.refresh
+import com.gato.relay.util.MINECRAFT_GAME_VERSION
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import net.lenni0451.commons.httpclient.HttpClient
 import net.raphimc.minecraftauth.MinecraftAuth
-import net.raphimc.minecraftauth.step.bedrock.session.StepFullBedrockSession.FullBedrockSession
+import net.raphimc.minecraftauth.bedrock.BedrockAuthManager
 import java.io.File
 
 object AccountManager {
@@ -22,12 +23,12 @@ object AccountManager {
     private val coroutineScope =
         CoroutineScope(Dispatchers.IO + CoroutineName("AccountManagerCoroutine"))
 
-    private val _accounts: MutableList<FullBedrockSession> = mutableStateListOf()
+    private val _accounts: MutableList<BedrockAuthManager> = mutableStateListOf()
 
-    val accounts: List<FullBedrockSession>
+    val accounts: List<BedrockAuthManager>
         get() = _accounts
 
-    var selectedAccount: FullBedrockSession? by mutableStateOf(null)
+    var selectedAccount: BedrockAuthManager? by mutableStateOf(null)
         private set
 
     init {
@@ -37,38 +38,43 @@ object AccountManager {
         selectedAccount = fetchSelectedAccount()
     }
 
-    fun addAccount(fullBedrockSession: FullBedrockSession) {
-        _accounts.add(fullBedrockSession)
+    fun displayNameOf(authManager: BedrockAuthManager): String =
+        runCatching {
+            authManager.minecraftCertificateChain.upToDate.identityDisplayName
+        }.getOrDefault("Account")
+
+    fun addAccount(authManager: BedrockAuthManager) {
+        _accounts.add(authManager)
 
         coroutineScope.launch {
             val file = File(AppContext.instance.cacheDir, "accounts")
             file.mkdirs()
 
-            val json = MinecraftAuth.BEDROCK_DEVICE_CODE_LOGIN
-                .toJson(fullBedrockSession)
-            file.resolve("${fullBedrockSession.mcChain.displayName}.json")
+            val json = BedrockAuthManager.toJson(authManager)
+            file.resolve("${displayNameOf(authManager)}.json")
                 .writeText(AuthUtils.gson.toJson(json))
         }
     }
 
-    fun containsAccount(fullBedrockSession: FullBedrockSession): Boolean {
-        return _accounts.find { it.mcChain.displayName == fullBedrockSession.mcChain.displayName } != null
+    fun containsAccount(authManager: BedrockAuthManager): Boolean {
+        val name = displayNameOf(authManager)
+        return _accounts.find { displayNameOf(it) == name } != null
     }
 
-    fun removeAccount(fullBedrockSession: FullBedrockSession) {
-        _accounts.remove(fullBedrockSession)
+    fun removeAccount(authManager: BedrockAuthManager) {
+        _accounts.remove(authManager)
 
         coroutineScope.launch {
             val file = File(AppContext.instance.cacheDir, "accounts")
             file.mkdirs()
 
-            file.resolve("${fullBedrockSession.mcChain.displayName}.json")
+            file.resolve("${displayNameOf(authManager)}.json")
                 .delete()
         }
     }
 
-    fun selectAccount(fullBedrockSession: FullBedrockSession?) {
-        this.selectedAccount = fullBedrockSession
+    fun selectAccount(authManager: BedrockAuthManager?) {
+        this.selectedAccount = authManager
 
         coroutineScope.launch {
             val file = File(AppContext.instance.cacheDir, "accounts")
@@ -76,8 +82,8 @@ object AccountManager {
 
             runCatching {
                 val selectedAccount = file.resolve("selectedAccount")
-                if (fullBedrockSession != null) {
-                    selectedAccount.writeText(fullBedrockSession.mcChain.displayName)
+                if (authManager != null) {
+                    selectedAccount.writeText(displayNameOf(authManager))
                 } else {
                     selectedAccount.delete()
                 }
@@ -85,17 +91,22 @@ object AccountManager {
         }
     }
 
-    private fun fetchAccounts(): List<FullBedrockSession> {
+    private fun newHttpClient(): HttpClient = MinecraftAuth.createHttpClient()
+
+    private fun fetchAccounts(): List<BedrockAuthManager> {
         val file = File(AppContext.instance.cacheDir, "accounts")
         file.mkdirs()
 
-        val accounts = ArrayList<FullBedrockSession>()
+        val accounts = ArrayList<BedrockAuthManager>()
         val listFiles = file.listFiles() ?: emptyArray()
         for (child in listFiles) {
             runCatching {
                 if (child.isFile && child.extension == "json") {
-                    val account = MinecraftAuth.BEDROCK_DEVICE_CODE_LOGIN
-                        .fromJson(JsonParser.parseString(child.readText()).asJsonObject)
+                    val account = BedrockAuthManager.fromJson(
+                        newHttpClient(),
+                        MINECRAFT_GAME_VERSION,
+                        JsonParser.parseString(child.readText()).asJsonObject
+                    )
                     accounts.add(account)
                 }
             }
@@ -104,7 +115,7 @@ object AccountManager {
         return accounts
     }
 
-    private fun fetchSelectedAccount(): FullBedrockSession? {
+    private fun fetchSelectedAccount(): BedrockAuthManager? {
         val file = File(AppContext.instance.cacheDir, "accounts")
         file.mkdirs()
 
@@ -114,7 +125,7 @@ object AccountManager {
         }
 
         val displayName = selectedAccount.readText()
-        return accounts.find { it.mcChain.displayName == displayName }
+        return accounts.find { runCatching { displayNameOf(it) }.getOrDefault("") == displayName }
     }
 
 }

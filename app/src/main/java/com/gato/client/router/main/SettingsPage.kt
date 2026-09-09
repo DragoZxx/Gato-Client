@@ -48,6 +48,7 @@ import com.gato.client.R
 import com.gato.client.util.LocalSnackbarHostState
 import com.gato.client.util.SnackbarHostStateScope
 import com.gato.client.overlay.OverlayManager
+import com.gato.client.ui.theme.ColorTheme
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -99,6 +100,7 @@ fun SettingsPageContent() {
         var showOpacityDialog by remember { mutableStateOf(false) }
         var showColumnsDialog by remember { mutableStateOf(false) }
         var showColorPickerDialog by remember { mutableStateOf(false) }
+        var showAccentPickerDialog by remember { mutableStateOf(false) }
         var selectedBorderColor by remember {
             mutableStateOf(
                 Color(sharedPreferences.getInt("overlay_border_color", Color.Cyan.toArgb()))
@@ -299,6 +301,35 @@ fun SettingsPageContent() {
                             )
                             Text(
                                 stringResource(R.string.overlay_border_color_description),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+
+                // Accent Color Settings Card (client theme)
+                OutlinedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    onClick = { showAccentPickerDialog = true }
+                ) {
+                    Row(
+                        Modifier.padding(15.dp),
+                        horizontalArrangement = Arrangement.spacedBy(15.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .background(ColorTheme.accent, CircleShape)
+                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "Color de acento",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                "Paleta del client (app y overlay). El default es el rosa pastel del PC",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -627,6 +658,66 @@ fun SettingsPageContent() {
                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        // Accent Color Dialog (client theme palette)
+        if (showAccentPickerDialog) {
+            BasicAlertDialog(
+                onDismissRequest = { showAccentPickerDialog = false },
+                modifier = Modifier.padding(vertical = 24.dp)
+            ) {
+                Surface(
+                    shape = AlertDialogDefaults.shape,
+                    tonalElevation = AlertDialogDefaults.TonalElevation
+                ) {
+                    Column(
+                        Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            "Color de acento",
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Text(
+                            "Toca un color para aplicarlo a todo el client",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(5),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(ColorTheme.presets.size) { index ->
+                                val (name, color) = ColorTheme.presets[index]
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(color, CircleShape)
+                                        .border(
+                                            width = if (ColorTheme.accent == color) 2.dp else 1.dp,
+                                            color = if (ColorTheme.accent == color)
+                                                MaterialTheme.colorScheme.primary
+                                            else
+                                                Color.Gray,
+                                            shape = CircleShape
+                                        )
+                                        .clickable {
+                                            ColorTheme.applyAccent(color)
+                                            showAccentPickerDialog = false
+                                        }
+                                )
+                            }
+                        }
+                        Text(
+                            "Rosa Pastel es el default (el rosa del GatoClient PC)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }

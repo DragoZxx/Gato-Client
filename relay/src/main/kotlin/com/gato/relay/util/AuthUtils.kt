@@ -3,12 +3,11 @@ package com.gato.relay.util
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.gato.relay.address.GatoAddress
-import net.raphimc.minecraftauth.step.bedrock.session.StepFullBedrockSession.FullBedrockSession
+import net.raphimc.minecraftauth.bedrock.BedrockAuthManager
 import org.jose4j.json.internal.json_simple.JSONObject
 import org.jose4j.jws.JsonWebSignature
 import org.jose4j.jwt.JwtClaims
 import org.jose4j.jwt.NumericDate
-import org.jose4j.jwt.consumer.JwtConsumerBuilder
 import org.jose4j.jwx.HeaderParameterNames
 import java.security.KeyFactory
 import java.security.KeyPair
@@ -75,46 +74,33 @@ object AuthUtils {
         return jws.compactSerialization
     }
 
+    /**
+     * The online login token for the new Bedrock token authentication: a
+     * single Mojang-signed JWT bound to the account's session key pair
+     * (sent as a TokenPayload with AuthType.FULL).
+     */
     @OptIn(ExperimentalEncodingApi::class)
-    fun fetchOnlineChain(fullBedrockSession: FullBedrockSession): List<String> {
-        val publicBase64Key = Base64.encode(fullBedrockSession.mcChain.publicKey.encoded)
-        val consumer = JwtConsumerBuilder()
-            .setAllowedClockSkewInSeconds(60)
-            .setVerificationKey(mojangPublicKey)
-            .build()
-
-        val mojangJws = consumer.process(fullBedrockSession.mcChain.mojangJwt).joseObjects[0] as JsonWebSignature
-
-        val claimsSet = JwtClaims()
-        claimsSet.setClaim("certificateAuthority", true)
-        claimsSet.setClaim("identityPublicKey", mojangJws.getHeader("x5u"))
-        claimsSet.setExpirationTimeMinutesInTheFuture((2 * 24 * 60).toFloat()) // 2 days
-        claimsSet.setNotBeforeMinutesInThePast(1f)
-
-        val selfSignedJws = JsonWebSignature()
-        selfSignedJws.payload = claimsSet.toJson()
-        selfSignedJws.key = fullBedrockSession.mcChain.privateKey
-        selfSignedJws.algorithmHeaderValue = "ES384"
-        selfSignedJws.setHeader(HeaderParameterNames.X509_URL, publicBase64Key)
-
-        val selfSignedJwt = selfSignedJws.compactSerialization
-
-        return listOf(selfSignedJwt, fullBedrockSession.mcChain.mojangJwt, fullBedrockSession.mcChain.identityJwt)
+    fun fetchOnlineToken(authManager: BedrockAuthManager): String {
+        val certificateChain = authManager.minecraftCertificateChain.upToDate
+        // touch the XBL/XSTS chain too so everything is refreshed up front
+        authManager.bedrockXstsToken.upToDate
+        return certificateChain.mojangJwt
     }
 
     @OptIn(ExperimentalEncodingApi::class, ExperimentalUuidApi::class)
     fun fetchOnlineSkinData(
-        fullBedrockSession: FullBedrockSession,
+        authManager: BedrockAuthManager,
         skinData: JSONObject,
         remoteAddress: GatoAddress
     ): String {
-        val publicKeyBase64 = Base64.encode(fullBedrockSession.mcChain.publicKey.encoded)
+        val publicKeyBase64 = Base64.encode(authManager.sessionKeyPair.public.encoded)
 
         val overridedData = HashMap<String, Any>()
-        overridedData["PlayFabId"] = fullBedrockSession.playFabToken.playFabId.lowercase(Locale.ROOT)
+        overridedData["PlayFabId"] = authManager.playFabToken.upToDate.entityId.lowercase(Locale.ROOT)
         overridedData["DeviceId"] = Uuid.random().toString()
         overridedData["DeviceOS"] = 1
-        overridedData["ThirdPartyName"] = fullBedrockSession.mcChain.displayName
+        overridedData["ThirdPartyName"] =
+            authManager.minecraftCertificateChain.upToDate.identityDisplayName
         overridedData["ServerAddress"] = "${remoteAddress.hostName}:${remoteAddress.port}"
 
         skinData.putAll(overridedData)
@@ -123,7 +109,7 @@ object AuthUtils {
         jws.algorithmHeaderValue = "ES384"
         jws.setHeader(HeaderParameterNames.X509_URL, publicKeyBase64)
         jws.payload = skinData.toJSONString()
-        jws.key = fullBedrockSession.mcChain.privateKey
+        jws.key = authManager.sessionKeyPair.private
 
         return jws.compactSerialization
     }

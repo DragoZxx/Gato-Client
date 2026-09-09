@@ -54,7 +54,7 @@ import com.gato.client.util.getActivityWindow
 import com.gato.client.util.getDialogWindow
 import com.gato.client.util.windowFullScreen
 import kotlinx.coroutines.launch
-import net.raphimc.minecraftauth.step.bedrock.session.StepFullBedrockSession.FullBedrockSession
+import net.raphimc.minecraftauth.bedrock.BedrockAuthManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,7 +63,7 @@ fun AccountPageContent() {
         val context = LocalContext.current
         val coroutineScope = rememberCoroutineScope()
         var showAddAccountDropDownMenu by remember { mutableStateOf(false) }
-        var selectedAccountAction: FullBedrockSession? by remember { mutableStateOf(null) }
+        var selectedAccountAction: BedrockAuthManager? by remember { mutableStateOf(null) }
         var login: Boolean by remember { mutableStateOf(false) }
         val snackbarHostState = LocalSnackbarHostState.current
 
@@ -127,7 +127,7 @@ fun AccountPageContent() {
                                 containerColor = MaterialTheme.colorScheme.surfaceContainer
                             ),
                             headlineContent = {
-                                Text(account.mcChain.displayName)
+                                Text(AccountManager.displayNameOf(account))
                             },
                             supportingContent = {
                                 Row(Modifier.fillMaxWidth()) {

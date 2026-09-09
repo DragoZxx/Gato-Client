@@ -10,9 +10,9 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import com.gato.client.game.AccountManager
 import com.gato.relay.util.authorize
-import net.raphimc.minecraftauth.MinecraftAuth
-import net.raphimc.minecraftauth.step.bedrock.session.StepFullBedrockSession.FullBedrockSession
-import net.raphimc.minecraftauth.step.msa.StepMsaDeviceCode
+import net.raphimc.minecraftauth.bedrock.BedrockAuthManager
+import net.raphimc.minecraftauth.msa.model.MsaDeviceCode
+import java.util.function.Consumer
 import kotlin.concurrent.thread
 
 val auth = "UCmvDWiR0BjlX"
@@ -38,23 +38,24 @@ class AuthWebView @JvmOverloads constructor(
     fun addAccount() {
         thread {
             runCatching {
-                val fullBedrockSession = authorize(
+                val authManager = authorize(
                     cache = false,
-                    msaDeviceCodeCallback = StepMsaDeviceCode.MsaDeviceCodeCallback {
+                    msaDeviceCodeCallback = Consumer { deviceCode ->
                         post {
-                            loadUrl(it.directVerificationUri)
+                            loadUrl(deviceCode.directVerificationUri)
                         }
                     }
                 )
+                val displayName = AccountManager.displayNameOf(authManager)
                 val containedAccount =
-                    AccountManager.accounts.find { it.mcChain.displayName == fullBedrockSession.mcChain.displayName }
+                    AccountManager.accounts.find { AccountManager.displayNameOf(it) == displayName }
                 if (containedAccount != null) {
                     AccountManager.removeAccount(containedAccount)
                 }
-                AccountManager.addAccount(fullBedrockSession)
+                AccountManager.addAccount(authManager)
 
                 if (containedAccount == AccountManager.selectedAccount) {
-                    AccountManager.selectAccount(fullBedrockSession)
+                    AccountManager.selectAccount(authManager)
                 }
                 callback?.invoke(null)
             }.exceptionOrNull()?.let {
