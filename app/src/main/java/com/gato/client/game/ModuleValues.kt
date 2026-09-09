@@ -40,6 +40,9 @@ sealed class Value<T>(val name: String, val defaultValue: T) {
 
     var value: T by mutableStateOf(defaultValue)
 
+    /** When it returns false the value is hidden from the settings UI (still configurable via config json). */
+    var visibleIf: (() -> Boolean)? = null
+
     open fun reset() {
         value = defaultValue
     }

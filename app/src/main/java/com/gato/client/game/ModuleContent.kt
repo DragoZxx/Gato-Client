@@ -185,6 +185,7 @@ private fun ModuleCard(module: Module) {
             }
             if (module.isExpanded) {
                 values.fastForEach {
+                    if (it.visibleIf?.invoke() == false) return@fastForEach
                     when (it) {
                         is BoolValue -> BoolValueContent(it)
                         is FloatValue -> FloatValueContent(it)
