@@ -55,6 +55,7 @@ import com.gato.client.game.module.motion.AirJumpModule
 import com.gato.client.game.module.motion.AntiAFKModule
 import com.gato.client.game.module.motion.AutoWalkModule
 import com.gato.client.game.module.motion.BhopModule
+import com.gato.client.game.module.motion.BypassFlyModule
 import com.gato.client.game.module.motion.FlyModule
 import com.gato.client.game.module.motion.HighJumpModule
 import com.gato.client.game.module.motion.JetPackModule
@@ -96,6 +97,7 @@ object ModuleManager {
     init {
         with(_modules) {
             add(FlyModule())
+            add(BypassFlyModule())
             add(ESPModule())
             add(ZoomModule())
             add(AirJumpModule())
