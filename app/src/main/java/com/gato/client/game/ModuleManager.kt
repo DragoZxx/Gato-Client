@@ -12,37 +12,10 @@ import com.gato.client.game.module.combat.AntiKnockbackModule
 import com.gato.client.game.module.combat.CrystalSmashModule
 import com.gato.client.game.module.combat.HitAndRunModule
 import com.gato.client.game.module.combat.HitboxModule
-import com.gato.client.game.module.combat.KillauraModule
 import com.gato.client.game.module.combat.TriggerBotModule
-import com.gato.client.game.module.effect.AbsorptionModule
-import com.gato.client.game.module.effect.BadOmenModule
-import com.gato.client.game.module.effect.BlindnessModule
-import com.gato.client.game.module.effect.ConduitPowerModule
-import com.gato.client.game.module.effect.DarknessModule
-import com.gato.client.game.module.effect.FatalPoisonModule
-import com.gato.client.game.module.effect.FireResistanceModule
-import com.gato.client.game.module.effect.HasteModule
-import com.gato.client.game.module.effect.HealthBoostModule
-import com.gato.client.game.module.effect.HungerModule
-import com.gato.client.game.module.effect.InstantDamageModule
-import com.gato.client.game.module.effect.InstantHealthModule
-import com.gato.client.game.module.effect.InvisibilityModule
-import com.gato.client.game.module.effect.JumpBoostModule
-import com.gato.client.game.module.effect.LevitationModule
-import com.gato.client.game.module.effect.MiningFatigueModule
-import com.gato.client.game.module.effect.NauseaModule
-import com.gato.client.game.module.effect.NightVisionModule
-import com.gato.client.game.module.effect.PoisonModule
+import com.gato.client.game.module.effect.EffectsModule
 import com.gato.client.game.module.effect.PoseidonModule
-import com.gato.client.game.module.effect.RegenerationModule
-import com.gato.client.game.module.effect.ResistanceModule
-import com.gato.client.game.module.effect.SaturationModule
-import com.gato.client.game.module.effect.SlowFallingModule
-import com.gato.client.game.module.effect.StrengthModule
-import com.gato.client.game.module.effect.SwiftnessModule
-import com.gato.client.game.module.effect.VillageHeroModule
-import com.gato.client.game.module.effect.WeaknessModule
-import com.gato.client.game.module.effect.WitherModule
+import com.gato.client.game.module.particle.ParticlesModule
 import com.gato.client.game.module.misc.BaritoneModule
 import com.gato.client.game.module.misc.CommandHandlerModule
 import com.gato.client.game.module.misc.OffhandModule
@@ -65,16 +38,8 @@ import com.gato.client.game.module.motion.BypassFlyModule
 import com.gato.client.game.module.motion.FlyModule
 import com.gato.client.game.module.motion.HighJumpModule
 import com.gato.client.game.module.motion.JetPackModule
-import com.gato.client.game.module.motion.MotionFlyModule
 import com.gato.client.game.module.motion.SpeedModule
 import com.gato.client.game.module.motion.SprintModule
-import com.gato.client.game.module.particle.BreezeWindExplosionParticleModule
-import com.gato.client.game.module.particle.BubbleParticleModule
-import com.gato.client.game.module.particle.DustParticleModule
-import com.gato.client.game.module.particle.ExplosionParticleModule
-import com.gato.client.game.module.particle.EyeOfEnderDeathParticleModule
-import com.gato.client.game.module.particle.FizzParticleModule
-import com.gato.client.game.module.particle.HeartParticleModule
 import com.gato.client.game.module.visual.CustomFovModule
 import com.gato.client.game.module.visual.ESPModule
 import com.gato.client.game.module.visual.FreeCameraModule
@@ -110,16 +75,13 @@ object ModuleManager {
             add(CustomFovModule())
             add(AirJumpModule())
             add(NoClipModule())
-            add(NightVisionModule())
-            add(HasteModule())
             add(SpeedModule())
             add(JetPackModule())
-            add(LevitationModule())
             add(HighJumpModule())
-            add(SlowFallingModule())
             add(PoseidonModule())
+            add(EffectsModule())
+            add(ParticlesModule())
             add(AntiKnockbackModule())
-            add(RegenerationModule())
             add(BhopModule())
             add(SprintModule())
             add(NoHurtCameraModule())
@@ -130,46 +92,15 @@ object ModuleManager {
             add(PopCounterModule())
             add(OffhandModule())
             add(TimerModule())
-            add(MotionFlyModule())
             add(FreeCameraModule())
-            add(KillauraModule())
             add(GatoAuraModule())
             add(Plus999AuraModule())
             add(GatoAuraXModule())
-            add(NauseaModule())
-            add(HealthBoostModule())
-            add(JumpBoostModule())
-            add(ResistanceModule())
-            add(FireResistanceModule())
-            add(SwiftnessModule())
-            add(InstantHealthModule())
-            add(StrengthModule())
-            add(InstantDamageModule())
-            add(InvisibilityModule())
-            add(SaturationModule())
-            add(AbsorptionModule())
-            add(BlindnessModule())
             add(AntiCrystalModule())
-            add(HungerModule())
-            add(WeaknessModule())
-            add(PoisonModule())
-            add(WitherModule())
-            add(FatalPoisonModule())
-            add(ConduitPowerModule())
-            add(BadOmenModule())
-            add(VillageHeroModule())
-            add(DarknessModule())
             add(TimeShiftModule())
             add(WeatherControllerModule())
             add(FakeDeathModule())
-            add(ExplosionParticleModule())
-            add(BubbleParticleModule())
-            add(HeartParticleModule())
             add(FakeXPModule())
-            add(DustParticleModule())
-            add(EyeOfEnderDeathParticleModule())
-            add(FizzParticleModule())
-            add(BreezeWindExplosionParticleModule())
             add(HitAndRunModule())
             add(HitboxModule())
             add(CrystalSmashModule())
@@ -179,7 +110,6 @@ object ModuleManager {
             add(PositionDisplayModule())
             add(CommandHandlerModule())
             add(NetworkInfoModule())
-            add(MiningFatigueModule())
             add(WorldStateModule())
             add(ReplayModule())
             add(BaritoneModule())
