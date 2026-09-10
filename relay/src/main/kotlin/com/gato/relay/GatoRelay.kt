@@ -112,7 +112,7 @@ class GatoRelay(
             .option(RakChannelOption.RAK_PROTOCOL_VERSION, 11)
             .option(RakChannelOption.RAK_GUID, clientGUID)
             .option(RakChannelOption.RAK_REMOTE_GUID, clientGUID)
-            .option(RakChannelOption.RAK_CONNECT_TIMEOUT, Long.MAX_VALUE)
+            .option(RakChannelOption.RAK_CONNECT_TIMEOUT, 15_000L) // bounded dial: no more 90s client hangs
             .handler(object : BedrockChannelInitializer<ClientSession>() {
 
                 override fun createSession0(peer: BedrockPeer, subClientId: Int): ClientSession {

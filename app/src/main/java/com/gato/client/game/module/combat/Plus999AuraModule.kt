@@ -11,6 +11,7 @@ import com.gato.client.game.entity.Player
 import org.cloudburstmc.math.vector.Vector3f
 import org.cloudburstmc.protocol.bedrock.data.LevelEvent
 import org.cloudburstmc.protocol.bedrock.data.PlayerAuthInputData
+import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataType
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityDataTypes
 import org.cloudburstmc.protocol.bedrock.data.entity.EntityFlag
 import org.cloudburstmc.protocol.bedrock.packet.BedrockPacket
@@ -349,11 +350,23 @@ class Plus999AuraModule : Module("+999aura", ModuleCategory.Combat) {
         val upperZ get() = posZ + width * 0.5f
     }
 
+    // metadata is written from the server-channel thread and read from the
+    // client-channel thread: tolerate the race instead of propagating it
+    private fun metadataFloat(e: Entity, key: EntityDataType<Float>, fallback: Float): Float =
+        runCatching { (e.metadata[key] as? Float) ?: fallback }.getOrDefault(fallback)
+
     private fun snapshot(e: Entity): TData {
-        val w = (e.metadata[EntityDataTypes.WIDTH] as? Float) ?: 0.6f
-        val h = (e.metadata[EntityDataTypes.HEIGHT] as? Float) ?: 1.8f
-        return TData(e, e.posX, e.posY, e.posZ, e.motionX, e.motionY, e.motionZ,
-            e.rotationYaw, w, h, hurtTimeOf(e), onGroundOf(e))
+        val w = metadataFloat(e, EntityDataTypes.WIDTH, 0.6f)
+        val h = metadataFloat(e, EntityDataTypes.HEIGHT, 1.8f)
+        val hurt = runCatching { hurtTimeOf(e) }.getOrDefault(0)
+        val ground = runCatching { onGroundOf(e) }.getOrDefault(false)
+        return runCatching {
+            TData(e, e.posX, e.posY, e.posZ, e.motionX, e.motionY, e.motionZ,
+                e.rotationYaw, w, h, hurt, ground)
+        }.getOrElse {
+            println("Plus999 snapshot error: ${it.stackTraceToString()}")
+            TData(e, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0.6f, 1.8f, 0, false)
+        }
     }
 
     // =======================================================================
@@ -371,10 +384,13 @@ class Plus999AuraModule : Module("+999aura", ModuleCategory.Combat) {
         tickCtr = 0; atkCount = 0
         raining = false
         resetPerTargetState()
-        // seed caches with the current rotation
-        rotOut[0] = session.localPlayer.rotationPitch
-        rotOut[1] = session.localPlayer.rotationYaw
-        rotCtx[0] = rotOut[0]; rotCtx[1] = rotOut[1]
+        // seed caches with the current rotation (only when a session exists —
+        // the module can be toggled from the app UI before the relay starts)
+        if (isSessionCreated) {
+            rotOut[0] = session.localPlayer.rotationPitch
+            rotOut[1] = session.localPlayer.rotationYaw
+            rotCtx[0] = rotOut[0]; rotCtx[1] = rotOut[1]
+        }
     }
 
     override fun onDisabled() {
@@ -486,6 +502,13 @@ class Plus999AuraModule : Module("+999aura", ModuleCategory.Combat) {
     }
 
     private fun tick(packet: PlayerAuthInputPacket) {
+        // defensive: a handler bug must never take the client down — log and skip the tick
+        runCatching { tickInner(packet) }.onFailure {
+            println("Plus999 tick error: ${it.stackTraceToString()}")
+        }
+    }
+
+    private fun tickInner(packet: PlayerAuthInputPacket) {
         val localPlayer = session.localPlayer
         gTick++
 
@@ -541,29 +564,38 @@ class Plus999AuraModule : Module("+999aura", ModuleCategory.Combat) {
         }
         rotOut[0] = pitch; rotOut[1] = yaw
 
-        // dispatch
+        // dispatch (each heavy handler is isolated: a failure skips the rotation
+        // update for this tick but never escapes the tick wrapper)
         val snap = snapshot(tgt)
-        when (rotationMode) {
-            2 -> { // Strafe — inline: full temporal sway
-                val t = gameTimeSec() * 0.1f
-                rotOut[0] = pitch + sin(t) * 10f
-                rotOut[1] = yaw + cos(t) * 10f
-                rotCtx[0] = rotOut[0]; rotCtx[1] = rotOut[1]
+        runCatching {
+            when (rotationMode) {
+                2 -> { // Strafe — inline: full temporal sway
+                    val t = gameTimeSec() * 0.1f
+                    rotOut[0] = pitch + sin(t) * 10f
+                    rotOut[1] = yaw + cos(t) * 10f
+                    rotCtx[0] = rotOut[0]; rotCtx[1] = rotOut[1]
+                }
+                3 -> rotFrontStrafe(snap, packet)
+                4 -> rotAirHvHPro(snap)
+                5 -> rotAdaptive(snap)
+                6 -> rotApex(snap)
+                7 -> rotSpectre(snap)
+                8 -> rotAegis(snap)
+                else -> {} // None/Silent: base aim only
             }
-            3 -> rotFrontStrafe(snap, packet)
-            4 -> rotAirHvHPro(snap)
-            5 -> rotAdaptive(snap)
-            6 -> rotApex(snap)
-            7 -> rotSpectre(snap)
-            8 -> rotAegis(snap)
-            else -> {} // None/Silent: base aim only
+        }.onFailure {
+            println("Plus999 rotation mode $rotationMode error: ${it.stackTraceToString()}")
         }
 
         // FASE atk
-        if (targetMode == 0) {
-            attackTarget(snap)
-        } else {
-            for (t in targets) attackTarget(snapshot(t))
+        runCatching {
+            if (targetMode == 0) {
+                attackTarget(snap)
+            } else {
+                for (t in targets) attackTarget(snapshot(t))
+            }
+        }.onFailure {
+            println("Plus999 attack error: ${it.stackTraceToString()}")
         }
 
         if (didSwitch && switchMode == 2) {

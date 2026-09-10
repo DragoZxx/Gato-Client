@@ -49,6 +49,18 @@ class OfflineLoginPacketListener(
 
             println("Handle offline login data")
 
+            println("[AUTH-DIAG] login path: OFFLINE (no account selected)")
+            runCatching {
+                val p = packet.authPayload
+                when (p) {
+                    is org.cloudburstmc.protocol.bedrock.data.auth.CertificateChainPayload ->
+                        println("[AUTH-DIAG] client auth: CertificateChainPayload type=${p.authType} chainSize=${p.chain.size}")
+                    is org.cloudburstmc.protocol.bedrock.data.auth.TokenPayload ->
+                        println("[AUTH-DIAG] client auth: TokenPayload type=${p.authType} tokenHead=${p.token.take(60)}")
+                    else -> println("[AUTH-DIAG] client auth: ${p?.javaClass?.name}")
+                }
+            }
+
             val jws = JsonWebSignature()
             jws.compactSerialization = packet.clientJwt
 
@@ -74,6 +86,7 @@ class OfflineLoginPacketListener(
                 val chain = AuthUtils.fetchOfflineChain(keyPair, extraData!!, chain!!)
                 val skinData = AuthUtils.fetchOfflineSkinData(keyPair, skinData!!)
 
+                println("[AUTH-DIAG] sending offline chain size=${chain.size}")
                 val loginPacket = LoginPacket()
                 loginPacket.protocolVersion = gatoRelaySession.server.codec.protocolVersion
                 loginPacket.authPayload = CertificateChainPayload(chain, AuthType.SELF_SIGNED)

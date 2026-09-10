@@ -75,16 +75,18 @@ object AuthUtils {
     }
 
     /**
-     * The online login token for the new Bedrock token authentication: a
-     * single Mojang-signed JWT bound to the account's session key pair
-     * (sent as a TokenPayload with AuthType.FULL).
+     * The online login token for the new Bedrock token authentication: the
+     * MinecraftMultiplayerToken (authorization.franchise.minecraft-services.net
+     * multiplayer/session/start) — RS256-signed by Mojang, carries the identity
+     * claims (xid/xname/mid) plus cpk bound to the account's session key pair.
+     * This is exactly what the vanilla client sends as a TokenPayload(FULL).
      */
     @OptIn(ExperimentalEncodingApi::class)
     fun fetchOnlineToken(authManager: BedrockAuthManager): String {
-        val certificateChain = authManager.minecraftCertificateChain.upToDate
-        // touch the XBL/XSTS chain too so everything is refreshed up front
+        // warm the dependency chain up front (xbl -> session -> multiplayer token)
         authManager.bedrockXstsToken.upToDate
-        return certificateChain.mojangJwt
+        authManager.minecraftSession.upToDate
+        return authManager.minecraftMultiplayerToken.upToDate.token
     }
 
     @OptIn(ExperimentalEncodingApi::class, ExperimentalUuidApi::class)

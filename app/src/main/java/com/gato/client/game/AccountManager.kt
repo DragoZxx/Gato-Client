@@ -9,6 +9,8 @@ import com.google.gson.JsonParser
 import com.gato.client.application.AppContext
 import com.gato.relay.util.AuthUtils
 import com.gato.relay.util.MINECRAFT_GAME_VERSION
+import com.gato.relay.util.warmUp
+import com.gato.client.util.McVersionResolver
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +21,10 @@ import net.raphimc.minecraftauth.bedrock.BedrockAuthManager
 import java.io.File
 
 object AccountManager {
+
+    // the multiplayer session token is version-locked: managers must be built
+    // with the version the connecting client runs (not the codec default)
+    val gameVersion: String by lazy { McVersionResolver.resolved(AppContext.instance) }
 
     private val coroutineScope =
         CoroutineScope(Dispatchers.IO + CoroutineName("AccountManagerCoroutine"))
@@ -36,6 +42,11 @@ object AccountManager {
 
         _accounts.addAll(fetchedAccounts)
         selectedAccount = fetchSelectedAccount()
+
+        // pre-fetch the auth chain so connecting doesn't block the relay's event loop
+        selectedAccount?.let { account ->
+            coroutineScope.launch { runCatching { account.warmUp() } }
+        }
     }
 
     fun displayNameOf(authManager: BedrockAuthManager): String =
@@ -47,6 +58,8 @@ object AccountManager {
         _accounts.add(authManager)
 
         coroutineScope.launch {
+            runCatching { authManager.warmUp() }
+
             val file = File(AppContext.instance.cacheDir, "accounts")
             file.mkdirs()
 
@@ -77,6 +90,8 @@ object AccountManager {
         this.selectedAccount = authManager
 
         coroutineScope.launch {
+            authManager?.let { runCatching { it.warmUp() } }
+
             val file = File(AppContext.instance.cacheDir, "accounts")
             file.mkdirs()
 
@@ -104,7 +119,7 @@ object AccountManager {
                 if (child.isFile && child.extension == "json") {
                     val account = BedrockAuthManager.fromJson(
                         newHttpClient(),
-                        MINECRAFT_GAME_VERSION,
+                        gameVersion,
                         JsonParser.parseString(child.readText()).asJsonObject
                     )
                     accounts.add(account)

@@ -2,6 +2,7 @@ package com.gato.relay.listener
 
 import com.gato.relay.GatoRelaySession
 import com.gato.relay.util.AuthUtils
+import com.gato.relay.util.warmUp
 import com.gato.relay.util.isExpired
 import net.raphimc.minecraftauth.bedrock.BedrockAuthManager
 import org.cloudburstmc.protocol.bedrock.data.PacketCompressionAlgorithm
@@ -34,11 +35,34 @@ class OnlineLoginPacketListener(
             }
 
             println("Handle online login data")
+            runCatching {
+                val p = packet.authPayload
+                when (p) {
+                    is org.cloudburstmc.protocol.bedrock.data.auth.CertificateChainPayload ->
+                        println("[AUTH-DIAG] client auth: CertificateChainPayload type=${p.authType} chainSize=${p.chain.size} first=${p.chain.firstOrNull()?.take(40)}")
+                    is org.cloudburstmc.protocol.bedrock.data.auth.TokenPayload -> {
+                        println("[AUTH-DIAG] client auth: TokenPayload type=${p.authType} tokenHead=${p.token.take(60)}")
+                        val jws = org.jose4j.jws.JsonWebSignature()
+                        jws.compactSerialization = p.token
+                        println("[AUTH-DIAG] CLIENT token claims=${jws.unverifiedPayload.take(700)}")
+                    }
+                    else -> println("[AUTH-DIAG] client auth: ${p?.javaClass?.name}")
+                }
+            }
 
             val jws = JsonWebSignature()
             jws.compactSerialization = packet.clientJwt
 
             skinData = JSONObject(JsonUtil.parseJson(jws.unverifiedPayload))
+            println("[AUTH-DIAG] CLIENT skin claims=${jws.unverifiedPayload.take(300)}")
+
+            // warm the auth chain off the netty thread while the server dial runs —
+            // the lazy holders would otherwise block the event loop for seconds and
+            // time the MC client out
+            kotlin.concurrent.thread(name = "AuthWarmUp") {
+                runCatching { authManager.warmUp() }
+            }
+
             connectServer()
             return true
         }
@@ -58,26 +82,50 @@ class OnlineLoginPacketListener(
             }
 
             try {
-                val token = AuthUtils.fetchOnlineToken(authManager)
-                val skinData =
-                    AuthUtils.fetchOnlineSkinData(
-                        authManager,
-                        skinData!!,
-                        gatoRelaySession.gatoRelay.remoteAddress!!
-                    )
+                // build the login OFF the netty event loop: the auth holders may hit
+                // the network (MSA/XBL/Mojang chain) and blocking here times the MC
+                // client out; netty channels accept writes from any thread
+                kotlin.concurrent.thread(name = "OnlineLoginBuild") {
+                    try {
+                        val token = AuthUtils.fetchOnlineToken(authManager)
+                        println("[AUTH-DIAG] sending online token len=${token.length} head=${token.take(40)}")
+                        runCatching {
+                            val jws = org.jose4j.jws.JsonWebSignature()
+                            jws.compactSerialization = token
+                            println("[AUTH-DIAG] OUR token claims=${jws.unverifiedPayload.take(700)}")
+                        }
+                        val skinData =
+                            AuthUtils.fetchOnlineSkinData(
+                                authManager,
+                                skinData!!,
+                                gatoRelaySession.gatoRelay.remoteAddress!!
+                            )
 
-                val loginPacket = LoginPacket()
-                loginPacket.protocolVersion = gatoRelaySession.server.codec.protocolVersion
-                loginPacket.authPayload = TokenPayload(token, AuthType.FULL)
-                loginPacket.clientJwt = skinData
-                gatoRelaySession.serverBoundImmediately(loginPacket)
+                        runCatching {
+                            val sjws = org.jose4j.jws.JsonWebSignature()
+                            sjws.compactSerialization = skinData
+                            println("[AUTH-DIAG] OUR skin claims=${sjws.unverifiedPayload.take(300)}")
+                        }
 
-                println("Login success")
+                        val loginPacket = LoginPacket()
+                        loginPacket.protocolVersion = gatoRelaySession.server.codec.protocolVersion
+                        loginPacket.authPayload = TokenPayload(token, AuthType.FULL)
+                        loginPacket.clientJwt = skinData
+                        gatoRelaySession.serverBoundImmediately(loginPacket)
+
+                        println("Login success")
+                    } catch (e: Throwable) {
+                        gatoRelaySession.clientBound(DisconnectPacket().apply {
+                            setKickMessage(e.toString())
+                        })
+                        println("Login failed: $e")
+                    }
+                }
             } catch (e: Throwable) {
                 gatoRelaySession.clientBound(DisconnectPacket().apply {
                     setKickMessage(e.toString())
                 })
-                println("Login failed: $e")
+                println("Login dispatch failed: $e")
             }
 
             return true

@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
 import com.gato.client.R
 import com.gato.client.overlay.OverlayManager
+import com.gato.client.ui.theme.ColorTheme
 import com.gato.client.util.translatedSelf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -129,7 +130,7 @@ fun ModuleContent(moduleCategory: ModuleCategory) {
 private fun ModuleCard(module: Module) {
     val values = module.values
     val background by animateColorAsState(
-        targetValue = if (module.isExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background
+        targetValue = if (module.isExpanded) ColorTheme.moduloOn.value else ColorTheme.moduloOff.value
     )
 
     Card(
@@ -162,9 +163,7 @@ private fun ModuleCard(module: Module) {
                     module.name.translatedSelf,
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier,
-                    color = if (module.isExpanded) contentColorFor(MaterialTheme.colorScheme.primary) else contentColorFor(
-                        MaterialTheme.colorScheme.background
-                    )
+                    color = ColorTheme.texto.value
                 )
                 Spacer(Modifier.weight(1f))
                 Switch(
@@ -173,10 +172,10 @@ private fun ModuleCard(module: Module) {
                         module.isEnabled = it
                     },
                     colors = SwitchDefaults.colors(
-                        checkedBorderColor = if (module.isExpanded) MaterialTheme.colorScheme.surface else Color.Transparent,
+                        checkedBorderColor = if (module.isExpanded) ColorTheme.texto.value else Color.Transparent,
                         uncheckedTrackColor = Color.Transparent,
-                        uncheckedBorderColor = if (module.isExpanded) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.outline,
-                        uncheckedThumbColor = if (module.isExpanded) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.outline,
+                        uncheckedBorderColor = if (module.isExpanded) ColorTheme.texto.value else MaterialTheme.colorScheme.outline,
+                        uncheckedThumbColor = if (module.isExpanded) ColorTheme.texto.value else MaterialTheme.colorScheme.outline,
                     ),
                     modifier = Modifier
                         .width(52.dp)
@@ -210,7 +209,7 @@ private fun ChoiceValueContent(value: ListValue) {
         Text(
             value.name.translatedSelf,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.surface
+            color = ColorTheme.texto.value
         )
         Row(
             Modifier
@@ -250,18 +249,18 @@ private fun FloatValueContent(value: FloatValue) {
             Text(
                 value.name.translatedSelf,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.surface
+                color = ColorTheme.texto.value
             )
             Spacer(Modifier.weight(1f))
             Text(
                 value.value.toString(),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.surface
+                color = ColorTheme.texto.value
             )
         }
         val colors = SliderDefaults.colors(
-            thumbColor = MaterialTheme.colorScheme.surface,
-            activeTrackColor = MaterialTheme.colorScheme.surface,
+            thumbColor = ColorTheme.texto.value,
+            activeTrackColor = ColorTheme.accent.value,
             activeTickColor = MaterialTheme.colorScheme.surface,
             inactiveTickColor = MaterialTheme.colorScheme.outlineVariant,
             inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
@@ -315,18 +314,18 @@ private fun IntValueContent(value: IntValue) {
             Text(
                 value.name.translatedSelf,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.surface
+                color = ColorTheme.texto.value
             )
             Spacer(Modifier.weight(1f))
             Text(
                 value.value.toString(),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.surface
+                color = ColorTheme.texto.value
             )
         }
         val colors = SliderDefaults.colors(
-            thumbColor = MaterialTheme.colorScheme.surface,
-            activeTrackColor = MaterialTheme.colorScheme.surface,
+            thumbColor = ColorTheme.texto.value,
+            activeTrackColor = ColorTheme.accent.value,
             activeTickColor = MaterialTheme.colorScheme.surface,
             inactiveTickColor = MaterialTheme.colorScheme.outlineVariant,
             inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant
@@ -386,7 +385,7 @@ private fun BoolValueContent(value: BoolValue) {
         Text(
             value.name.translatedSelf,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.surface
+            color = ColorTheme.texto.value
         )
         Spacer(Modifier.weight(1f))
         Checkbox(
@@ -425,7 +424,7 @@ private fun ShortcutContent(module: Module) {
         Text(
             stringResource(R.string.shortcut),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.surface
+            color = ColorTheme.texto.value
         )
         Spacer(Modifier.weight(1f))
         Checkbox(
@@ -451,7 +450,7 @@ private fun <T : Enum<T>> EnumValueContent(value: EnumValue<T>) {
         Text(
             value.name.translatedSelf,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.surface
+            color = ColorTheme.texto.value
         )
         Row(
             Modifier
@@ -489,7 +488,7 @@ private fun StringValueContent(value: StringValue) {
         Text(
             value.name.translatedSelf,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.surface
+            color = ColorTheme.texto.value
         )
         OutlinedTextField(
             value = value.value,

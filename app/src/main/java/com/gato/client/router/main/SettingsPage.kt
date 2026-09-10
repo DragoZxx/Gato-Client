@@ -1,6 +1,8 @@
 package com.gato.client.router.main
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +28,7 @@ import com.gato.client.util.SnackbarHostStateScope
 import androidx.core.content.edit
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,6 +51,7 @@ import com.gato.client.R
 import com.gato.client.util.LocalSnackbarHostState
 import com.gato.client.util.SnackbarHostStateScope
 import com.gato.client.overlay.OverlayManager
+import com.gato.client.ui.component.ColorPicker
 import com.gato.client.ui.theme.ColorTheme
 
 import android.content.Context
@@ -100,7 +104,16 @@ fun SettingsPageContent() {
         var showOpacityDialog by remember { mutableStateOf(false) }
         var showColumnsDialog by remember { mutableStateOf(false) }
         var showColorPickerDialog by remember { mutableStateOf(false) }
-        var showAccentPickerDialog by remember { mutableStateOf(false) }
+        var showThemeEditorDialog by remember { mutableStateOf(false) }
+        var editingSlot by remember { mutableStateOf<ColorTheme.Slot?>(null) }
+        var showImportField by remember { mutableStateOf(false) }
+        var showVersionDialog by remember { mutableStateOf(false) }
+        var showRelayLogsDialog by remember { mutableStateOf(false) }
+        var relayLogText by remember { mutableStateOf("") }
+        var mcVersionOverride by remember {
+            mutableStateOf(sharedPreferences.getString("mc_version_override", "auto") ?: "auto")
+        }
+        var importText by remember { mutableStateOf("") }
         var selectedBorderColor by remember {
             mutableStateOf(
                 Color(sharedPreferences.getInt("overlay_border_color", Color.Cyan.toArgb()))
@@ -307,11 +320,63 @@ fun SettingsPageContent() {
                     }
                 }
 
-                // Accent Color Settings Card (client theme)
+                // Relay logs card
                 OutlinedCard(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.medium,
-                    onClick = { showAccentPickerDialog = true }
+                    onClick = {
+                        relayLogText = com.gato.client.util.RelayLog.asText()
+                        showRelayLogsDialog = true
+                    }
+                ) {
+                    Row(
+                        Modifier.padding(15.dp),
+                        horizontalArrangement = Arrangement.spacedBy(15.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "Registros del relay",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                "Diagnósticos de conexión y login ([AUTH-DIAG], errores)",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+
+                // Minecraft client version card (relay advertisement)
+                OutlinedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    onClick = { showVersionDialog = true }
+                ) {
+                    Row(
+                        Modifier.padding(15.dp),
+                        horizontalArrangement = Arrangement.spacedBy(15.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "Versión del client Minecraft",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                if (mcVersionOverride == "auto") "Auto-detectada del teléfono"
+                                else "Fijada: $mcVersionOverride",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+
+                // Interface personalization card (full theme editor)
+                OutlinedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.medium,
+                    onClick = { showThemeEditorDialog = true }
                 ) {
                     Row(
                         Modifier.padding(15.dp),
@@ -321,15 +386,15 @@ fun SettingsPageContent() {
                         Box(
                             modifier = Modifier
                                 .size(24.dp)
-                                .background(ColorTheme.accent, CircleShape)
+                                .background(ColorTheme.accent.value, CircleShape)
                         )
                         Column(Modifier.weight(1f)) {
                             Text(
-                                "Color de acento",
+                                "Personalización de interfaz",
                                 style = MaterialTheme.typography.bodyLarge
                             )
                             Text(
-                                "Paleta del client (app y overlay). El default es el rosa pastel del PC",
+                                "Colores de toda la app y la click gui, configurables uno por uno",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -663,10 +728,78 @@ fun SettingsPageContent() {
             }
         }
 
-        // Accent Color Dialog (client theme palette)
-        if (showAccentPickerDialog) {
+        // Relay logs viewer dialog
+        if (showRelayLogsDialog) {
             BasicAlertDialog(
-                onDismissRequest = { showAccentPickerDialog = false },
+                onDismissRequest = { showRelayLogsDialog = false },
+                modifier = Modifier.padding(vertical = 12.dp)
+            ) {
+                Surface(
+                    shape = AlertDialogDefaults.shape,
+                    tonalElevation = AlertDialogDefaults.TonalElevation,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text("Registros del relay", style = MaterialTheme.typography.headlineSmall)
+
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(360.dp)
+                        ) {
+                            androidx.compose.foundation.text.selection.SelectionContainer {
+                                androidx.compose.foundation.rememberScrollState().let { scroll ->
+                                    Column(
+                                        Modifier
+                                            .verticalScroll(scroll)
+                                            .padding(8.dp)
+                                    ) {
+                                        Text(
+                                            relayLogText.ifBlank { "(vacío — activa el relay y conéctate primero)" },
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilledTonalButton(
+                                onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE)
+                                        as android.content.ClipboardManager
+                                    clipboard.setPrimaryClip(
+                                        android.content.ClipData.newPlainText("gato_logs", relayLogText)
+                                    )
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("Logs copiados")
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) { Text("Copiar") }
+                            FilledTonalButton(
+                                onClick = {
+                                    com.gato.client.util.RelayLog.clear()
+                                    relayLogText = ""
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) { Text("Limpiar") }
+                            TextButton(onClick = { showRelayLogsDialog = false }) { Text("Cerrar") }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Minecraft version selector dialog
+        if (showVersionDialog) {
+            BasicAlertDialog(
+                onDismissRequest = { showVersionDialog = false },
                 modifier = Modifier.padding(vertical = 24.dp)
             ) {
                 Surface(
@@ -674,50 +807,185 @@ fun SettingsPageContent() {
                     tonalElevation = AlertDialogDefaults.TonalElevation
                 ) {
                     Column(
-                        Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        Modifier
+                            .padding(20.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            "Color de acento",
+                            "Versión del client Minecraft",
                             style = MaterialTheme.typography.headlineSmall
                         )
                         Text(
-                            "Toca un color para aplicarlo a todo el client",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(5),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(ColorTheme.presets.size) { index ->
-                                val (name, color) = ColorTheme.presets[index]
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .background(color, CircleShape)
-                                        .border(
-                                            width = if (ColorTheme.accent == color) 2.dp else 1.dp,
-                                            color = if (ColorTheme.accent == color)
-                                                MaterialTheme.colorScheme.primary
-                                            else
-                                                Color.Gray,
-                                            shape = CircleShape
-                                        )
-                                        .clickable {
-                                            ColorTheme.applyAccent(color)
-                                            showAccentPickerDialog = false
-                                        }
-                                )
-                            }
-                        }
-                        Text(
-                            "Rosa Pastel es el default (el rosa del GatoClient PC)",
+                            "El relay anuncia esta versión al conectarte. 'Auto' usa la de Minecraft instalada en el teléfono.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+
+                        val versions = listOf("auto") + com.gato.relay.util.SUPPORTED_VERSIONS.keys.toList()
+                        versions.forEach { version ->
+                            val selected = mcVersionOverride == version
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        mcVersionOverride = version
+                                        sharedPreferences.edit { putString("mc_version_override", version) }
+                                        showVersionDialog = false
+                                    }
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                androidx.compose.material3.RadioButton(
+                                    selected = selected,
+                                    onClick = null
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    if (version == "auto") "Auto (detectar del teléfono)"
+                                    else version,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Interface personalization editor
+        if (showThemeEditorDialog) {
+            BasicAlertDialog(
+                onDismissRequest = { showThemeEditorDialog = false },
+                modifier = Modifier.padding(vertical = 12.dp)
+            ) {
+                Surface(
+                    shape = AlertDialogDefaults.shape,
+                    tonalElevation = AlertDialogDefaults.TonalElevation,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        Modifier
+                            .padding(20.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            "Personalización de interfaz",
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Text(
+                            "Toca un elemento para editar su color. La config se guarda sola y puedes copiarla/pegarla como texto.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        ColorTheme.all.forEach { slot ->
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { editingSlot = slot }
+                                    .padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .background(slot.value, CircleShape)
+                                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                                )
+                                Text(slot.label, style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
+
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilledTonalButton(
+                                onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE)
+                                        as android.content.ClipboardManager
+                                    clipboard.setPrimaryClip(
+                                        android.content.ClipData.newPlainText("gato_theme", ColorTheme.exportJson())
+                                    )
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar("Config copiada al portapapeles")
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Copiar config")
+                            }
+                            FilledTonalButton(
+                                onClick = { showImportField = !showImportField },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Pegar config")
+                            }
+                            FilledTonalButton(
+                                onClick = { ColorTheme.resetAll() },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Restablecer")
+                            }
+                        }
+
+                        if (showImportField) {
+                            OutlinedTextField(
+                                value = importText,
+                                onValueChange = { importText = it },
+                                label = { Text("Pega aquí la config JSON") },
+                                singleLine = false,
+                                maxLines = 4,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            FilledTonalButton(
+                                onClick = {
+                                    val result = ColorTheme.importJson(importText)
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            if (result > 0) "Config aplicada ($result colores)"
+                                            else "Config inválida"
+                                        )
+                                    }
+                                },
+                                enabled = importText.isNotBlank(),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Aplicar config")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // per-slot color picker dialog
+        editingSlot?.let { slot ->
+            BasicAlertDialog(
+                onDismissRequest = { editingSlot = null },
+                modifier = Modifier.padding(vertical = 24.dp)
+            ) {
+                Surface(
+                    shape = AlertDialogDefaults.shape,
+                    tonalElevation = AlertDialogDefaults.TonalElevation
+                ) {
+                    Column(
+                        Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Text(slot.label, style = MaterialTheme.typography.headlineSmall)
+                        ColorPicker(
+                            initialColor = slot.value,
+                            onColorChange = { ColorTheme.setSlot(slot, it) }
+                        )
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            TextButton(onClick = { editingSlot = null }) {
+                                Text("Listo")
+                            }
+                        }
                     }
                 }
             }

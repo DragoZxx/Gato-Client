@@ -26,7 +26,11 @@ import com.gato.relay.listener.AutoCodecPacketListener
 import com.gato.relay.listener.GamingPacketHandler
 import com.gato.relay.listener.OfflineLoginPacketListener
 import com.gato.relay.listener.OnlineLoginPacketListener
+import com.gato.relay.util.advertisedVersionFor
+import com.gato.relay.util.buildAdvertisement
 import com.gato.relay.util.captureGamePacket
+import com.gato.client.util.RelayLog
+import com.gato.relay.util.SUPPORTED_VERSIONS
 import java.io.File
 import kotlin.concurrent.thread
 
@@ -87,9 +91,16 @@ object Services {
             }
 
             val selectedAccount = AccountManager.selectedAccount
+
+            // advertise the INSTALLED client version: a pong with a newer protocol
+            // than the connecting client makes it abort the join (InitialConnection-13)
+            val chosenVersion = com.gato.client.util.McVersionResolver.resolved(context)
+            println("GatoRelay advertising client version: $chosenVersion")
+
             // Start GatoRelay to capture game packets
             runCatching {
                 gatoRelay = captureGamePacket(
+                    advertisement = buildAdvertisement(chosenVersion),
                     remoteAddress = GatoAddress(
                         captureModeModel.serverHostName,
                         captureModeModel.serverPort
@@ -112,6 +123,27 @@ object Services {
             }
 
         }
+    }
+
+    /**
+     * Tees System.out into RelayLog so the relay's println diagnostics can be
+     * read from the Settings page (and shared as text) without a PC.
+     */
+    private fun installRelayLogTee() {
+        if (System.out.javaClass.name.contains("RelayLogTee")) return
+        val original = System.out
+        System.setOut(object : java.io.PrintStream(original, true, Charsets.UTF_8) {
+            override fun println(x: String?) {
+                super.println(x)
+                x?.let { RelayLog.log(it) }
+            }
+
+            override fun println(x: Any?) {
+                super.println(x)
+                RelayLog.log(x.toString())
+            }
+        })
+        RelayLog.log("=== relay log tee installed ===")
     }
 
     private fun off() {

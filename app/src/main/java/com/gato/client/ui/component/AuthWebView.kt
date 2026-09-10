@@ -39,6 +39,7 @@ class AuthWebView @JvmOverloads constructor(
         thread {
             runCatching {
                 val authManager = authorize(
+                    gameVersion = AccountManager.gameVersion,
                     cache = false,
                     msaDeviceCodeCallback = Consumer { deviceCode ->
                         post {
