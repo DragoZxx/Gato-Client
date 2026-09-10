@@ -75,6 +75,7 @@ import com.gato.client.game.module.particle.ExplosionParticleModule
 import com.gato.client.game.module.particle.EyeOfEnderDeathParticleModule
 import com.gato.client.game.module.particle.FizzParticleModule
 import com.gato.client.game.module.particle.HeartParticleModule
+import com.gato.client.game.module.visual.CustomFovModule
 import com.gato.client.game.module.visual.ESPModule
 import com.gato.client.game.module.visual.FreeCameraModule
 import com.gato.client.game.module.visual.NetworkInfoModule
@@ -106,6 +107,7 @@ object ModuleManager {
             add(BypassFlyModule())
             add(ESPModule())
             add(ZoomModule())
+            add(CustomFovModule())
             add(AirJumpModule())
             add(NoClipModule())
             add(NightVisionModule())
