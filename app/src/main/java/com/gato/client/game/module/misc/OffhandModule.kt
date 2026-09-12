@@ -92,7 +92,8 @@ class OffhandModule : Module("Offhand", ModuleCategory.Misc) {
     private var replayPending = false
     private var replayDelayTicks = 0
 
-    private fun itemName(item: ItemData): String? = item.definition?.identifier
+    private fun itemName(item: ItemData): String? =
+    item.definition?.identifier ?: itemPalette[item.runtimeId]?.identifier
 
     /**
      * Replays the user's own manual offhand move: an ItemStackRequest with the
@@ -109,7 +110,7 @@ class OffhandModule : Module("Offhand", ModuleCategory.Misc) {
         val inventory = session.localPlayer.inventory
 
         val totemSlot = inventory.searchForItem(0 until 36) {
-            it.definition?.identifier == TOTEM
+            itemName(it) == TOTEM
         } ?: run {
             RelayLog.log("[Offhand] replay: no totem in inventory")
             return
