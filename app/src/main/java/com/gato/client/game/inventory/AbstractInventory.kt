@@ -60,7 +60,10 @@ abstract class AbstractInventory(val containerId: Int) {
             ItemStackRequestPacket().also {
                 val src = content[sourceSlot]
                 val dst = destinationInventory.content[destinationSlot]
-                if (dst == ItemData.AIR) {
+                // reference equality against ItemData.AIR is unreliable: the
+                // deserialized empty slots are fresh instances — use netId == 0
+                val dstEmpty = dst == ItemData.AIR || dst.netId == 0
+                if (dstEmpty) {
                     it.requests.add(
                         ItemStackRequest(
                             serverAuthoritative,

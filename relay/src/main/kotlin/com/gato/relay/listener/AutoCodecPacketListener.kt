@@ -53,6 +53,21 @@ class AutoCodecPacketListener(
         }
     }
 
+    override fun beforeServerBound(packet: BedrockPacket): Boolean {
+        // capture the item registry the real server announces (custom items —
+        // the vanilla baseline comes from the embedded palette). Without this,
+        // inventory items deserialize without identifiers and item-based
+        // modules (Offhand/AutoTool/FastUse) cannot see anything.
+        when (packet) {
+            is StartGamePacket ->
+                Definitions.registerItemDefinitions(packet.itemDefinitions)
+            is ItemComponentPacket ->
+                Definitions.registerItemDefinitions(packet.items)
+            else -> {}
+        }
+        return false
+    }
+
     override fun beforeClientBound(packet: BedrockPacket): Boolean {
         if (packet is RequestNetworkSettingsPacket) {
             val protocolVersion = packet.protocolVersion

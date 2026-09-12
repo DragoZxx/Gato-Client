@@ -5,6 +5,9 @@ import android.content.Context
 import android.net.Uri
 import com.gato.client.application.AppContext
 import com.gato.client.game.module.combat.AntiCrystalModule
+import com.gato.client.game.module.combat.AutoTrapModule
+import com.gato.client.game.module.combat.AutoCrystalModule
+import com.gato.client.game.module.combat.CritAuraModule
 import com.gato.client.game.module.combat.GatoAuraModule
 import com.gato.client.game.module.combat.GatoAuraXModule
 import com.gato.client.game.module.combat.Plus999AuraModule
@@ -21,6 +24,11 @@ import com.gato.client.game.module.misc.CommandHandlerModule
 import com.gato.client.game.module.misc.OffhandModule
 import com.gato.client.game.module.misc.PopCounterModule
 import com.gato.client.game.module.misc.DesyncModule
+import com.gato.client.game.module.misc.AutoSneakModule
+import com.gato.client.game.module.misc.AutoToolModule
+import com.gato.client.game.module.misc.DeathLoggerModule
+import com.gato.client.game.module.misc.FastUseModule
+import com.gato.client.game.module.misc.NoSwingModule
 import com.gato.client.game.module.misc.TimerModule
 import com.gato.client.game.module.misc.FakeDeathModule
 import com.gato.client.game.module.misc.FakeXPModule
@@ -92,8 +100,16 @@ object ModuleManager {
             add(PopCounterModule())
             add(OffhandModule())
             add(TimerModule())
+            add(FastUseModule())
+            add(AutoToolModule())
+            add(AutoSneakModule())
+            add(NoSwingModule())
+            add(DeathLoggerModule())
             add(FreeCameraModule())
             add(GatoAuraModule())
+            add(CritAuraModule())
+            add(AutoCrystalModule())
+            add(AutoTrapModule())
             add(Plus999AuraModule())
             add(GatoAuraXModule())
             add(AntiCrystalModule())

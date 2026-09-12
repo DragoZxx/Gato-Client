@@ -2,6 +2,7 @@ package com.gato.client.game.inventory
 
 import com.gato.client.game.GameSession
 import com.gato.client.game.entity.LocalPlayer
+import com.gato.client.util.RelayLog
 import org.cloudburstmc.protocol.bedrock.data.PlayerAuthInputData
 import org.cloudburstmc.protocol.bedrock.data.inventory.ContainerId
 import org.cloudburstmc.protocol.bedrock.data.inventory.ContainerSlotType
@@ -94,6 +95,9 @@ class PlayerInventory(private val player: LocalPlayer) : EntityInventory(player)
             }
 
             is ItemStackResponsePacket -> {
+                packet.entries.forEach {
+                    RelayLog.log("[Inv] stack response: ${it.result} (server id=${it.requestId})")
+                }
                 val newResponse = packet.entries.map {
                     val oldId =
                         requestIdMap[it.requestId]?.also { _ -> requestIdMap.remove(it.requestId) }
@@ -129,6 +133,7 @@ class PlayerInventory(private val player: LocalPlayer) : EntityInventory(player)
      */
     fun itemStackRequest(request: ItemStackRequest, session: GameSession) {
         assert(player.inventoriesServerAuthoritative) { "inventory action is not server authoritative" }
+        RelayLog.log("[Inv] stack request queued id=${request.requestId}")
         if (player.movementServerAuthoritative) {
             pendingRequests.add(request)
         } else {
